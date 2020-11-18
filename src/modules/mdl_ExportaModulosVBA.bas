@@ -13,7 +13,7 @@ Option Explicit
 '
 ' Microsoft Visual Basic For Applications Extensibility 5.3
 '
-'
+' Microsoft Scripting Runtime
 '
 '
 ' IMPORTANTE ATIVAR A OPÇÃO CONFIAR EM MACROS ACESSANDO A ROTA
@@ -23,25 +23,35 @@ Option Explicit
 '=================================================================================
 
 Const cNameFolderSaveModules As String = "src"
+Const cFolderModules As String = "modules"
+Const cFolderForms As String = "forms"
+Const cFolderClassModules As String = "class_modules"
 Public Sub ExportModules()
+
     Dim bExport As Boolean
     Dim wkbSource As Excel.Workbook
     Dim szSourceWorkbook As String
     Dim szExportPath As String
     Dim szFileName As String
     Dim cmpComponent As VBIDE.VBComponent
+    Dim folderVBAProjectFiles As String
+    
+    folderVBAProjectFiles = FolderWithVBAProjectFiles
 
     ''' The code modules will be exported in a folder named.
     ''' VBAProjectFiles in the Documents folder.
     ''' The code below create this folder if it not exist
     ''' or delete all files in the folder if it exist.
-    If FolderWithVBAProjectFiles = "Error" Then
+    If folderVBAProjectFiles = "Error" Then
         MsgBox "Export Folder not exist"
         Exit Sub
     End If
     
     On Error Resume Next
-        Kill FolderWithVBAProjectFiles & "\*.*"
+        Kill folderVBAProjectFiles & "\*.*"
+        Kill folderVBAProjectFiles & "\" & cFolderForms & "\*.*"
+        Kill folderVBAProjectFiles & "\" & cFolderModules & "\*.*"
+        Kill folderVBAProjectFiles & "\" & cFolderClassModules & "\*.*"
     On Error GoTo 0
 
     ''' NOTE: This workbook must be open in Excel.
@@ -54,21 +64,24 @@ Public Sub ExportModules()
     Exit Sub
     End If
     
-    szExportPath = FolderWithVBAProjectFiles & "\"
     
     For Each cmpComponent In wkbSource.VBProject.VBComponents
         
         bExport = True
+        szExportPath = folderVBAProjectFiles & "\"
         szFileName = cmpComponent.Name
 
         ''' Concatenate the correct filename for export.
         Select Case cmpComponent.Type
             Case vbext_ct_ClassModule
                 szFileName = szFileName & ".cls"
+                szExportPath = szExportPath & cFolderClassModules
             Case vbext_ct_MSForm
                 szFileName = szFileName & ".frm"
+                szExportPath = szExportPath & cFolderForms
             Case vbext_ct_StdModule
                 szFileName = szFileName & ".bas"
+                szExportPath = szExportPath & cFolderModules
             Case vbext_ct_Document
                 ''' This is a worksheet or workbook object.
                 ''' Don't try to export.
@@ -77,7 +90,7 @@ Public Sub ExportModules()
         
         If bExport Then
             ''' Export the component to a text file.
-            cmpComponent.Export szExportPath & szFileName
+            cmpComponent.Export szExportPath & "\" & szFileName
             
         ''' remove it from the project if you want
         '''wkbSource.VBProject.VBComponents.Remove cmpComponent
@@ -87,6 +100,7 @@ Public Sub ExportModules()
     Next cmpComponent
 
     MsgBox "Export is ready"
+    
 End Sub
 
 
@@ -164,9 +178,13 @@ Function FolderWithVBAProjectFiles() As String
         SpecialPath = SpecialPath & "\"
     End If
     
+    
     If FSO.FolderExists(SpecialPath & cNameFolderSaveModules) = False Then
         On Error Resume Next
         MkDir SpecialPath & cNameFolderSaveModules
+        MkDir SpecialPath & cNameFolderSaveModules & "\" & cFolderForms
+        MkDir SpecialPath & cNameFolderSaveModules & "\" & cFolderModules
+        MkDir SpecialPath & cNameFolderSaveModules & "\" & cFolderClassModules
         On Error GoTo 0
     End If
     
@@ -193,3 +211,4 @@ Function DeleteVBAModulesAndUserForms()
             End If
         Next VBComp
 End Function
+
